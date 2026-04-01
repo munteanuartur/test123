@@ -1,31 +1,31 @@
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
+export async function onRequestPost(context) {
+  try {
+    // 1. Parse the form data from the request
+    const formData = await context.request.formData();
+    const data = Object.fromEntries(formData.entries());
 
-    // Only handle requests to /api/submit
-    if (request.method === "POST" && url.pathname === "/api/submit") {
-      try {
-        const input = await request.formData();
-        const data = Object.fromEntries(input.entries());
+    // 2. Process the data (Example: Forwarding it to Web3Forms via fetch)
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        access_key: "c5ca0130-819d-4f22-b234-ce4515e7380e", // Your key
+        ...data,
+      }),
+    });
 
-        data.access_key = "c5ca0130-819d-4f22-b234-ce4515e7380e";
+    const result = await response.json();
 
-        const response = await fetch("https://api.web3forms.com/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        const result = await response.json();
-        return new Response(JSON.stringify(result), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-        });
-
-      } catch (err) {
-        return new Response(err.message, { status: 500 });
-      }
+    if (result.success) {
+      return new Response("Success! Thank you for your message.", { status: 200 });
+    } else {
+      return new Response("Something went wrong with the provider.", { status: 500 });
     }
 
-    return new Response("Not Found", { status: 404 });
+  } catch (err) {
+    return new Response("Error processing form: " + err.message, { status: 500 });
   }
-};
+}
